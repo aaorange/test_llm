@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 from transformers.models.qwen3 import Qwen3ForCausalLM
 
-
+# 测试修改xxx
 # Qwen3-0.6B模型结构配置
 QWEN_CONFIG_06_B = {
     "vocab_size": 151936,                  # 词表大小
