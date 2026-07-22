@@ -9,7 +9,7 @@
 4、调model.generate()，传入input_ids ✅
 5、解析第4步的token_ids: 将传入的input_ids这部分截掉，然后将新生成的token_ids，使用tokenizer.decode进行解码。将结果，最终输出 ✅
 """
-
+#wzj修改了
 from argparse import ArgumentParser
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from torch import Tensor
