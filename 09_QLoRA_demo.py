@@ -26,7 +26,6 @@ from transformers import AutoModelForCausalLM,AutoTokenizer
 from datasets import load_dataset, DatasetDict
 ## 1.1 数据加载
 data:DatasetDict = load_dataset("json",data_files={"train":"data/psychology_data.jsonl",})
-
 data = data["train"].train_test_split(test_size = 0.05)
 
 
