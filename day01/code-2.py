@@ -80,7 +80,7 @@ class Agent:
         actions = torch.tensor(actions).view(-1, 1)
         log_action_probs = torch.log(self.pi(states).gather(1, actions))
 
-        obj = torch.sum(G * log_action_probs)
+        obj = torch.sum(log_action_probs) * G
 
         loss = -obj
 
