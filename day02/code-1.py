@@ -74,7 +74,7 @@ class Agent:
             Gt_list_reversed.append(G)
 
         Gt_list = torch.tensor(
-            list(reversed(Gt_list_reversed)))
+            list(reversed(Gt_list_reversed))).view(-1, 1)
 
         states = torch.tensor(states)  # [S_0, S_1, ..., S_T], (B, 4)
         # [A_0, A_1, ..., A_T]
@@ -84,7 +84,7 @@ class Agent:
         # (B,) --> (B, 1)
         actions = torch.tensor(actions).view(-1, 1)
         # [logπ_θ(A_0|S_0), logπ_θ(A_1|S_1), ..., logπ_θ(A_T|S_T)]
-        log_action_probs = torch.log(self.pi(states).gather(1, actions)).squeeze(1)
+        log_action_probs = torch.log(self.pi(states).gather(1, actions))
 
         obj = torch.sum(log_action_probs * Gt_list)
 
