@@ -100,6 +100,8 @@ class Agent:
         td_errors = td_targets - self.v(states)
         # 单步TD误差在计算策略梯度的时候，是常量
         td_errors = td_errors.detach()
+        
+        print(self.v(states).detach())
 
         return states, actions, rewards, td_targets, td_errors
 
