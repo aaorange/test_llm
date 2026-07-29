@@ -1,8 +1,8 @@
-import matplotlib.pyplot as plt
 import gym
+import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class PolicyNet(nn.Module):
@@ -30,8 +30,7 @@ class Agent:
         self.gamma = 0.98  # 折扣因子: γ
         self.pi = PolicyNet()  # 策略: pi_theta, π_θ
         self.lr_pi = 0.002
-        self.optimizer_pi = torch.optim.Adam(
-            self.pi.parameters(), lr=self.lr_pi)
+        self.optimizer_pi = torch.optim.Adam(self.pi.parameters(), lr=self.lr_pi)
 
     def get_action(self, state):
         """state: (4,)"""
