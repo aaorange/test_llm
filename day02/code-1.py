@@ -66,10 +66,15 @@ class Agent:
     def update(self, trajectory):
         states, actions, rewards = trajectory
 
-        # G(τ)
+        # [G_0, G_1, ..., G_T]
         G = 0.0
+        Gt_list_reversed = []
         for r in rewards[::-1]:
             G = r + self.gamma * G
+            Gt_list_reversed.append(G)
+
+        Gt_list = torch.tensor(
+            list(reversed(Gt_list_reversed))).view(-1, 1)
 
         states = torch.tensor(states)  # [S_0, S_1, ..., S_T], (B, 4)
         # [A_0, A_1, ..., A_T]
@@ -81,7 +86,7 @@ class Agent:
         # [logπ_θ(A_0|S_0), logπ_θ(A_1|S_1), ..., logπ_θ(A_T|S_T)]
         log_action_probs = torch.log(self.pi(states).gather(1, actions))
 
-        obj = torch.sum(log_action_probs) * G
+        obj = torch.sum(log_action_probs * Gt_list)
 
         loss = -obj
 

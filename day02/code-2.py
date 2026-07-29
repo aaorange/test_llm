@@ -25,13 +25,32 @@ class PolicyNet(nn.Module):
         return x
 
 
+class ValueNet(nn.Module):
+    """价值函数网络：V_ω"""
+
+    def __init__(self):
+        super().__init__()
+        self.l1 = nn.Linear(4, 128)
+        self.l2 = nn.Linear(128, 1)
+
+    def forward(self, x):
+        # x: (B, 4)
+        # 输出：(B, 1)
+        x = F.relu(self.l1(x))
+        x = self.l2(x)
+        return x
+
+
 class Agent:
     def __init__(self):
         self.gamma = 0.98  # 折扣因子: γ
         self.pi = PolicyNet()  # 策略: pi_theta, π_θ
+        self.v = ValueNet()
         self.lr_pi = 0.002
+        self.lr_v = 0.05
         self.optimizer_pi = torch.optim.Adam(
             self.pi.parameters(), lr=self.lr_pi)
+        self.optimizer_v = torch.optim.Adam(self.v.parameters(), lr=self.lr_v)
 
     def get_action(self, state):
         """state: (4,)"""
@@ -45,8 +64,10 @@ class Agent:
         """在环境env中采样一条轨迹trajectory"""
         state = env.reset()  # S_0
         states = []  # [S_0, S_1, ..., S_T]
+        next_states = []  # [S_1, S_2, ..., S_{T+1}]
         actions = []  # [A_0, A_1, ..., A_T]
         rewards = []  # [R_0, R_1, ..., R_T]
+        dones = []  # [False, False, ..., True]
 
         done = False  # 初始化为游戏没结束
 
@@ -55,39 +76,49 @@ class Agent:
             next_state, reward, done, _ = env.step(action)  # 在环境中执行动作
 
             states.append(state)  # S_t
+            next_states.append(next_state)
             actions.append(action)  # A_t
             rewards.append(reward)  # R_t
+            dones.append(done)
 
             # 状态转移
             state = next_state
 
-        return states, actions, rewards
+        states = torch.tensor(states)
+        next_states = torch.tensor(next_states)
+        actions = torch.tensor(actions).view(-1, 1)
+        rewards = torch.tensor(rewards).view(-1, 1)
+        dones = torch.tensor(dones, dtype=torch.float).view(-1, 1)
+
+        # 单步TD目标
+        # [R_0 + γV(S_1), R_1 + γV(S_2), ..., R_T]
+        td_targets = rewards + self.gamma * self.v(next_states) * (1 - dones)
+        # 单步TD目标作为预测目标，是常量
+        td_targets = td_targets.detach()
+        # 单步TD误差
+        # [R_0 + γV(S_1) - V(S_0), R_1 + γV(S_2) - V(S_1), ..., R_T - V(S_T)]
+        td_errors = td_targets - self.v(states)
+        # 单步TD误差在计算策略梯度的时候，是常量
+        td_errors = td_errors.detach()
+
+        return states, actions, rewards, td_targets, td_errors
 
     def update(self, trajectory):
-        states, actions, rewards = trajectory
-
-        # G(τ)
-        G = 0.0
-        for r in rewards[::-1]:
-            G = r + self.gamma * G
-
-        states = torch.tensor(states)  # [S_0, S_1, ..., S_T], (B, 4)
-        # [A_0, A_1, ..., A_T]
-        #       |
-        #       v
-        # [[A_0], [A_1], ..., [A_T]]
-        # (B,) --> (B, 1)
-        actions = torch.tensor(actions).view(-1, 1)
+        states, actions, rewards, td_targets, td_errors = trajectory
         # [logπ_θ(A_0|S_0), logπ_θ(A_1|S_1), ..., logπ_θ(A_T|S_T)]
         log_action_probs = torch.log(self.pi(states).gather(1, actions))
-
-        obj = torch.sum(log_action_probs) * G
-
-        loss = -obj
+        # ① 策略函数的目标函数
+        obj = torch.sum(log_action_probs * td_errors)
+        loss_pi = -obj
+        # ② 价值网络的损失函数MSE
+        loss_v = F.mse_loss(self.v(states), td_targets)
 
         self.optimizer_pi.zero_grad()
-        loss.backward()
+        self.optimizer_v.zero_grad()
+        loss_pi.backward()
+        loss_v.backward()
         self.optimizer_pi.step()
+        self.optimizer_v.step()
 
 
 # 创建推车环境
